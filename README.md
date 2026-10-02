@@ -1,36 +1,49 @@
 # BRCA DFS Recurrence Risk Demo
 
+**[Try the Live Demo](https://brca-dfs-demo.onrender.com/)**
+
 A Flask web application that demonstrates a machine learning model for predicting disease-free survival (DFS) recurrence or progression status using clinical and genomic features from the TCGA-BRCA cohort.
 
-**Author: Aryan Jagani**  
-Built for the GWU HIVE Lab PredictMod volunteership. This repository provides a standalone demonstration interface, separate from the PredictMod platform submission.
+**Author: Aryan Jagani**
 
-> For research and education only. The model has not been externally validated and must not be used to guide patient care.
+Built for the GWU HIVE Lab PredictMod volunteership. This project provides a standalone demonstration interface, separate from the PredictMod platform submission.
+
+> For research and educational purposes only. This model has not been externally validated and must not be used to guide patient care.
 
 ## Overview
 
-Enter a patient profile in the browser to obtain the model's predicted probability of recurrence or progression and see how that output compares with two decision thresholds.
+Enter a patient profile to view the model’s predicted probability of recurrence or progression and compare the result against two decision thresholds.
 
-The application loads a saved logistic regression pipeline trained with SMOTE oversampling. It assembles the submitted values into a pandas DataFrame and passes them to the pipeline, which handles preprocessing internally.
+The application uses a saved logistic regression pipeline trained with SMOTE oversampling. Input values are assembled into a pandas DataFrame and passed to the pipeline, which handles preprocessing internally.
 
 This is a **binary classification demo**, not a time-to-event survival model. Its output does not represent recurrence risk over a defined period, such as five years.
 
 ## Features
 
-- Browser form for clinical characteristics, receptor status, and gene mutation flags.
-- Single-profile inference using the included trained model.
+- Interactive browser form for clinical and genomic inputs.
+- Single-profile predictions using the included trained model.
 - Predicted recurrence/progression probability displayed as a percentage.
-- Separate screening and balanced threshold indicators.
-- Submitted values retained after prediction for easy comparison.
+- Screening and balanced threshold indicators.
+- Submitted values retained after prediction.
 - Model and metadata loaded once at application startup.
 
-## Model and dataset
+## Technology Stack
+
+- **Backend:** Python, Flask
+- **Machine Learning:** scikit-learn, imbalanced-learn
+- **Data Processing:** pandas
+- **Model Serialization:** joblib
+- **Frontend:** HTML, CSS, Jinja2
+- **Application Server:** Gunicorn
+- **Hosting:** Render
+
+## Model and Dataset
 
 The following details are recorded in [`model/model_metadata.json`](model/model_metadata.json):
 
 | Item | Value |
 | --- | --- |
-| Cohort | TCGA-BRCA |
+| Dataset | TCGA-BRCA |
 | Patients | 895 |
 | Recurrence/progression events | 97 |
 | Model | Logistic regression with SMOTE oversampling |
@@ -39,7 +52,7 @@ The following details are recorded in [`model/model_metadata.json`](model/model_
 | Input features | 19: 13 numeric and 6 categorical |
 | Random state | 42 |
 
-### Reported performance
+### Reported Performance
 
 | Evaluation | Metric | Value |
 | --- | --- | --- |
@@ -48,143 +61,182 @@ The following details are recorded in [`model/model_metadata.json`](model/model_
 | 5-fold cross-validation | Mean ROC-AUC | 0.6367 |
 | 5-fold cross-validation | ROC-AUC standard deviation | 0.0594 |
 
-These are saved training/evaluation results from the metadata; running the web application does not recompute them. Training data and the training notebook are not included in this repository.
+These values come from the saved model metadata. Running the web application does not recompute them.
 
-### Decision thresholds
+### Decision Thresholds
 
-| Indicator | Threshold | Metadata description |
+| Indicator | Threshold | Description |
 | --- | --- | --- |
 | Screening | 0.5000 | Higher sensitivity with more false alarms |
-| Balanced | 0.7271 | F1-optimal threshold from cross-validated training predictions; fewer false alarms with lower sensitivity |
+| Balanced | 0.7271 | F1-optimal threshold from cross-validated training predictions |
 
-A profile is flagged when its predicted probability is greater than or equal to the corresponding threshold. The interface rounds threshold labels to whole percentages, so the balanced threshold appears as **73%**, while the comparison uses **0.7271**.
+A profile is flagged when its predicted probability is greater than or equal to the corresponding threshold.
 
-## Inputs
+The interface rounds threshold labels to whole percentages, so the balanced threshold appears as **73%**, while the actual comparison uses **0.7271**.
 
-| Group | Features | Form input |
-| --- | --- | --- |
-| Clinical numeric values | `AGE`, `TMB_NONSYNONYMOUS` | Age at diagnosis and nonsynonymous tumor mutation burden |
-| Tumor stage | `AJCC_PATHOLOGIC_TUMOR_STAGE` | Dropdown |
-| Receptor status | `ER_STATUS_BY_IHC`, `PR_STATUS_BY_IHC`, `IHC_HER2` | Dropdowns |
-| Cancer classification | `CANCER_TYPE`, `CANCER_TYPE_DETAILED` | Dropdowns |
-| Gene mutations | `TP53`, `PIK3CA`, `GATA3`, `CDH1`, `PTEN`, `MAP3K1`, `MAP2K4`, `KRAS`, `ARID1A`, `RUNX1`, `ESR1` | Checkboxes: checked = `1`, unchecked = `0` |
+## Input Features
 
-The browser constrains age to 18–100 and tumor mutation burden to nonnegative values. Dropdown choices are defined in `app.py`. An unchecked mutation flag is treated as not mutated, not as an unknown value.
+### Clinical and Tumor Characteristics
 
-The original gene-panel notes mention 12 genes, but the deployed feature list contains **11 mutation flags**; `KMT2C` is listed among the dropped columns.
-
-## Repository contents
-
-| Path | Purpose |
+| Feature | Description |
 | --- | --- |
-| `app.py` | Flask routes, model loading, form parsing, and inference |
-| `templates/index.html` | Input form, styling, prediction results, and disclaimer |
+| `AGE` | Age at diagnosis |
+| `TMB_NONSYNONYMOUS` | Nonsynonymous tumor mutation burden |
+| `AJCC_PATHOLOGIC_TUMOR_STAGE` | Pathologic tumor stage |
+| `ER_STATUS_BY_IHC` | Estrogen receptor status |
+| `PR_STATUS_BY_IHC` | Progesterone receptor status |
+| `IHC_HER2` | HER2 status |
+| `CANCER_TYPE` | Cancer classification |
+| `CANCER_TYPE_DETAILED` | Detailed cancer subtype |
+
+### Gene Mutation Flags
+
+The application includes mutation checkboxes for:
+
+- `TP53`
+- `PIK3CA`
+- `GATA3`
+- `CDH1`
+- `PTEN`
+- `MAP3K1`
+- `MAP2K4`
+- `KRAS`
+- `ARID1A`
+- `RUNX1`
+- `ESR1`
+
+Checked boxes are encoded as `1`, and unchecked boxes are encoded as `0`. An unchecked box represents “not mutated,” not an unknown value.
+
+The original metadata notes describe a 12-gene panel, but the deployed model uses **11 mutation flags**, with `KMT2C` listed among the dropped columns.
+
+## Repository Structure
+
+| Path | Description |
+| --- | --- |
+| `app.py` | Flask routes, model loading, input processing, and inference |
+| `templates/index.html` | Input form, styling, and prediction results |
 | `model/dfs_model.joblib` | Serialized trained model pipeline |
-| `model/model_metadata.json` | Feature definitions, thresholds, evaluation metrics, and limitations |
+| `model/model_metadata.json` | Features, thresholds, metrics, and limitations |
 | `requirements.txt` | Pinned Python dependencies |
 
-## Run locally
+## Getting Started
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/ARYANJAGANI/brca-dfs-demo.git
 cd brca-dfs-demo
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a Virtual Environment
 
-Use Python 3.11 or newer as a starting environment. The repository does not declare an exact Python version.
+Python 3.11 or newer is a suggested starting environment. The repository does not declare an exact Python version.
 
-**Windows PowerShell**
+**Windows PowerShell:**
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-**macOS / Linux**
+**macOS / Linux:**
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Dependencies include Flask, pandas, scikit-learn, imbalanced-learn, joblib, and Gunicorn. Keep the pinned versions where possible because serialized model compatibility depends on the installed libraries.
+Use the pinned dependency versions where possible because compatibility with serialized models depends on the installed libraries.
 
-### 4. Start the application
+### 4. Run the Application
 
 ```bash
 python app.py
 ```
 
-Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
+Open the application in your browser:
 
-### 5. Make a demonstration prediction
+**http://127.0.0.1:5000**
+
+## Using the Demo
 
 1. Enter age at diagnosis and tumor mutation burden.
-2. Select tumor stage, receptor statuses, and cancer classifications.
-3. Check the genes marked as mutated in your demonstration profile.
-4. Click **Predict recurrence risk**.
-5. Review the model output and both threshold indicators.
+2. Select tumor stage and receptor statuses.
+3. Select the cancer type and detailed subtype.
+4. Check the genes marked as mutated in your demonstration profile.
+5. Click **Predict recurrence risk**.
+6. Review the predicted probability and both threshold indicators.
 
-Use synthetic profiles when demonstrating the app. Default form values are illustrative and are not a validated clinical example.
+Use synthetic profiles for demonstrations. Default form values are illustrative and do not represent a validated clinical example.
 
-## Request flow
+You can also access the hosted application:
 
-`GET /` renders the form. Submitting it sends a form-encoded `POST /predict`, which:
+**https://brca-dfs-demo.onrender.com/**
 
-1. Parses numeric, categorical, and mutation inputs.
-2. Orders DataFrame columns using the metadata feature lists.
-3. Calls `model.predict_proba(...)` and selects the positive-class probability.
-4. Compares the probability with both thresholds.
-5. Returns the HTML page with the results and submitted values.
+## How It Works
 
-The current endpoint returns HTML, not a JSON API response.
+1. `GET /` renders the input form.
+2. The form submits patient features to `POST /predict`.
+3. The application converts the inputs into a one-row pandas DataFrame.
+4. Columns are ordered according to the model metadata.
+5. The saved pipeline generates the positive-class probability using `predict_proba()`.
+6. The application compares the result against both decision thresholds.
+7. The page displays the prediction and retains the submitted values.
 
-## Serving with Gunicorn
+The prediction endpoint returns an HTML page, not a JSON response.
 
-For a Linux or WSL environment, run from the repository root:
+## Running with Gunicorn
+
+In a Linux or WSL environment, run the following command from the repository root:
 
 ```bash
 gunicorn --bind 127.0.0.1:8000 app:app
 ```
 
-Then open [http://127.0.0.1:8000](http://127.0.0.1:8000). Gunicorn is included in the dependencies and does not run natively on Windows.
+Then open:
 
-`python app.py` enables Flask debug mode and is intended for local development. The repository is a demo and does not include authentication, comprehensive server-side input validation, or a production deployment configuration.
+**http://127.0.0.1:8000**
+
+Gunicorn is included in `requirements.txt` and does not run natively on Windows.
+
+Running `python app.py` enables Flask debug mode and is intended for local development.
 
 ## Limitations
 
-- **Small event count:** The cohort contains 97 recurrence/progression events among 895 patients.
-- **No censoring model:** DFS status is treated as a binary label. The classifier does not account for right-censored follow-up or model time to recurrence.
+- **Limited recurrence events:** The cohort includes 97 recurrence/progression events among 895 patients.
+- **No time-to-event modeling:** DFS status is treated as a binary label without accounting for right-censored follow-up.
 - **No external validation:** Evaluation is limited to the TCGA-BRCA cohort.
-- **Limited genomic coverage:** The mutation inputs cover a selected gene panel rather than the full mutation landscape.
+- **Limited genomic coverage:** The model uses a selected gene panel rather than the full mutation landscape.
 - **Cohort heterogeneity:** Metadata notes a small number of Breast Sarcoma and Skin Cancer, Non-Melanoma records.
-- **Probability interpretation:** The repository does not report probability-calibration metrics; displayed percentages should not be interpreted as validated individual clinical risk estimates.
-- **Inference-only repository:** The source data, training notebook, and evaluation workflow are not included, so the training results cannot be reproduced from this repository alone.
+- **Probability calibration:** Calibration metrics are not reported. Displayed percentages should not be interpreted as validated individual clinical risk estimates.
+- **Inference-only repository:** Training data, the training notebook, and the evaluation workflow are not included.
+- **Demo application:** Authentication and comprehensive server-side input validation are not implemented.
 
 ## Troubleshooting
 
-| Issue | What to check |
+| Issue | Suggested Check |
 | --- | --- |
-| Model or metadata file not found | Confirm both files remain in the `model/` directory beside `app.py`. |
-| Missing module or model-loading compatibility error | Activate the virtual environment and install the dependencies from `requirements.txt`. |
-| A pinned package cannot be installed | Check the package's availability for your Python version and operating system before changing versions. |
-| Prediction request fails | Confirm all required fields are supplied; malformed direct requests are not handled with custom validation errors. |
+| Model or metadata file not found | Confirm both files are present in the `model/` directory beside `app.py`. |
+| Missing dependency | Activate the virtual environment and install `requirements.txt`. |
+| Model-loading compatibility error | Check that installed library versions match the pinned dependencies. |
+| A pinned package cannot be installed | Check availability for your Python version and operating system before changing versions. |
+| Prediction request fails | Confirm that all required form fields are supplied. |
 
 Only load serialized `.joblib` models from trusted sources.
 
 ## Author
 
-**Aryan Jagani**  
-[GitHub](https://github.com/ARYANJAGANI) · [Project repository](https://github.com/ARYANJAGANI/brca-dfs-demo)
+**Aryan Jagani**
+
+- [GitHub](https://github.com/ARYANJAGANI)
+- [Project Repository](https://github.com/ARYANJAGANI/brca-dfs-demo)
+- [Live Demo](https://brca-dfs-demo.onrender.com/)
 
 ## License
 
